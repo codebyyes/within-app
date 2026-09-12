@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Within</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0;
+       font-family: -apple-system, "Helvetica Neue", sans-serif; }
+  body { background: #f0f0f0; display: flex; justify-content: center;
+         align-items: center; min-height: 100vh; padding: 20px; }
+
+  .phone { background: #e8e8e8; border-radius: 36px; padding: 12px;
+           width: 360px; border: 2px solid #ccc; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+  .screen { background: #fff; border-radius: 26px; overflow: hidden;
+            height: 640px; display: flex; flex-direction: column; position: relative; }
+
+  .status-bar { padding: 12px 20px 4px; display: flex; justify-content: space-between;
+                font-size: 12px; color: #888; }
+  .header { padding: 14px 20px 10px; }
+  .app-name { font-size: 28px; font-weight: 600; color: #1a5c4a; letter-spacing: -.5px; }
+  .app-sub { font-size: 13px; color: #666; margin-top: 2px; }
+
+  .page { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .page.active { display: flex; }
+
+  .back-row { display: flex; align-items: center; gap: 6px; padding: 10px 20px 6px;
+              cursor: pointer; color: #1a5c4a; font-size: 14px; }
+
+  .home-body { flex: 1; display: flex; flex-direction: column; justify-content: center;
+               padding: 20px 20px 30px; gap: 16px; }
+  .main-btn { display: flex; align-items: center; gap: 14px; background: #fff;
+              border: 1px solid #d5d5d5; border-radius: 16px; padding: 20px; cursor: pointer;
+              transition: background .15s; }
+  .main-btn:active { background: #f7f7f7; }
+  .icon-wrap { width: 48px; height: 48px; border-radius: 12px; display: flex;
+               align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+  .icon-wrap.green { background: #e6f4f0; color: #1a5c4a; }
+  .icon-wrap.blue { background: #e6eef8; color: #185fa5; }
+  .btn-text { flex: 1; }
+  .btn-title { font-size: 17px; font-weight: 600; color: #1a1a1a; }
+  .btn-desc { font-size: 13px; color: #666; margin-top: 2px; }
+  .home-footer { padding: 0 20px 20px; text-align: center; font-size: 13px; color: #999; }
+
+  .add-body { flex: 1; padding: 6px 20px 16px; display: flex; flex-direction: column;
+              gap: 12px; overflow-y: auto; }
+  .label { font-size: 13px; color: #666; }
+  textarea { width: 100%; background: #fafafa; border: 1.5px solid #d5d5d5;
+             border-radius: 12px; padding: 14px; font-size: 15px; color: #1a1a1a;
+             line-height: 1.6; min-height: 90px; resize: none; outline: none; }
+  textarea:focus { border-color: #1a5c4a; }
+  .kw-box { min-height: 48px; }
+  .kw-label { font-size: 12px; color: #999; margin-bottom: 6px; }
+  .kw-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kw-tag { background: #e6f4f0; color: #1a5c4a; border-radius: 20px;
+            padding: 6px 14px; font-size: 14px; font-weight: 500; }
+  .kw-tag.old { background: #f2f2f2; color: #aaa; text-decoration: line-through; }
+  .kw-empty { font-size: 14px; color: #aaa; font-style: italic; }
+  .date-row { font-size: 13px; color: #999; }
+  .warn { font-size: 12px; color: #888; line-height: 1.5; padding: 10px 12px;
+          background: #fafafa; border-radius: 8px; border-left: 3px solid #ccc; }
+  .spacer { flex: 1; min-height: 4px; }
+  .btn-primary { width: 100%; background: #1a5c4a; color: #fff; border: none;
+                 border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600;
+                 cursor: pointer; }
+  .btn-primary:disabled { background: #ddd; color: #999; cursor: not-allowed; }
+
+  .search-area { padding: 4px 20px 8px; }
+  .search-box { display: flex; align-items: center; gap: 10px; background: #fff;
+                border: 1.5px solid #d5d5d5; border-radius: 12px; padding: 10px 14px; }
+  .search-box:focus-within { border-color: #1a5c4a; }
+  .search-box input { flex: 1; border: none; outline: none; font-size: 15px; color: #1a1a1a; }
+  .search-hint { font-size: 12px; color: #aaa; margin-top: 6px; padding-left: 4px; }
+  .results { flex: 1; padding: 8px 20px; overflow-y: auto; }
+  .section-label { font-size: 12px; color: #999; margin-bottom: 10px; }
+  .record-card { background: #fafafa; border: 1px solid #eee; border-radius: 12px;
+                 padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
+  .record-card:active { background: #f0f8f5; }
+  .record-id { font-size: 11px; color: #1a5c4a; font-weight: 600; margin-bottom: 6px; }
+  .record-entry { padding: 6px 0; border-bottom: 1px solid #eee; }
+  .record-entry:last-child { border-bottom: none; padding-bottom: 0; }
+  .record-date { font-size: 11px; color: #999; margin-bottom: 3px; }
+  .record-kw { font-size: 14px; color: #1a1a1a; line-height: 1.5; }
+  .kw-struck { color: #aaa; text-decoration: line-through; }
+
+  .detail-head { padding: 8px 20px; border-bottom: 1px solid #eee; }
+  .detail-id { font-size: 22px; font-weight: 600; color: #1a5c4a; }
+  .detail-obj { font-size: 13px; color: #666; margin-top: 2px; }
+  .detail-body { flex: 1; padding: 4px 20px; overflow-y: auto; }
+  .detail-entry { padding: 14px 0; border-bottom: 1px solid #eee; }
+  .detail-entry:last-child { border-bottom: none; }
+  .entry-top { display: flex; justify-content: space-between; align-items: flex-start;
+               margin-bottom: 4px; }
+  .del-btn { font-size: 12px; color: #c0392b; background: #fff5f5; border: 1px solid #f0c0bc;
+             border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  .detail-kw { font-size: 15px; color: #1a1a1a; margin-bottom: 6px; line-height: 1.5; }
+  .detail-orig { font-size: 12px; color: #666; line-height: 1.5; background: #fafafa;
+                 border-radius: 8px; padding: 8px 10px; border-left: 3px solid #1a5c4a; }
+  .detail-footer { padding: 12px 20px 16px; border-top: 1px solid #eee; }
+  .nav-row { display: flex; justify-content: space-between; margin-top: 12px; }
+  .nav-link { font-size: 14px; color: #1a5c4a; cursor: pointer; }
+
+  .success-body { flex: 1; display: flex; flex-direction: column; justify-content: center;
+                  align-items: center; padding: 24px; gap: 14px; }
+  .success-icon { width: 72px; height: 72px; background: #e6f4f0; border-radius: 50%;
+                  display: flex; align-items: center; justify-content: center;
+                  font-size: 36px; color: #1a5c4a; }
+  .success-title { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+  .success-card { width: 100%; background: #fafafa; border: 1px solid #eee;
+                  border-radius: 12px; padding: 14px 16px; }
+  .btn-ghost { width: 100%; background: #fff; color: #1a5c4a; border: 1px solid #1a5c4a;
+               border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600;
+               cursor: pointer; }
+
+  .loading { font-size: 13px; color: #1a5c4a; font-style: italic; }
+  .empty { text-align: center; color: #aaa; font-size: 14px; padding: 30px 0; }
+</style>
+</head>
+<body>
+<div class="phone">
+<div class="screen">
+  <div class="status-bar"><span id="clock">9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+  <div class="header">
+    <div class="app-name">Within</div>
+    <div class="app-sub">Search your own life</div>
+  </div>
+
+  <div class="page active" id="p-home">
+    <div class="home-body">
+      <div class="main-btn" onclick="goAdd(null)">
+        <div class="icon-wrap green">&#43;</div>
+        <div class="btn-text">
+          <div class="btn-title">Add a record</div>
+          <div class="btn-desc">Just say it. AI does the rest.</div>
+        </div>
+        <span style="color:#ccc">&rsaquo;</span>
+      </div>
+      <div class="main-btn" onclick="goSearch()">
+        <div class="icon-wrap blue">&#128269;</div>
+        <div class="btn-text">
+          <div class="btn-title">Search</div>
+          <div class="btn-desc">Find what you once knew</div>
+        </div>
+        <span style="color:#ccc">&rsaquo;</span>
+      </div>
+    </div>
+    <div class="home-footer"><span id="count">0</span> records</div>
+  </div>
+
+  <div class="page" id="p-add">
+    <div class="back-row" onclick="show('p-home')">&larr; Home</div>
+    <div class="add-body">
+      <div class="label" id="add-label">Say it, or type it</div>
+      <textarea id="input" placeholder="e.g. I bought a washing machine from PChome, two-year warranty"
+                oninput="onInput()"></textarea>
+      <div class="kw-box">
+        <div class="kw-label">Keywords extracted by AI</div>
+        <div class="kw-row" id="kw-row"><span class="kw-empty">Appears as you type&hellip;</span></div>
+      </div>
+      <div class="date-row" id="today"></div>
+      <div class="spacer"></div>
+      <div class="warn">Records cannot be edited once saved. To update, add a new record. To remove, delete the entry.</div>
+      <button class="btn-primary" id="save-btn" disabled onclick="save()">Save</button>
+    </div>
+  </div>
+
+  <div class="page" id="p-search">
+    <div class="back-row" onclick="show('p-home')">&larr; Home</div>
+    <div class="search-area">
+      <div class="search-box">
+        <span>&#128269;</span>
+        <input id="q" placeholder="Search what you recorded&hellip;"
+               onkeydown="if(event.key==='Enter')doSearch()">
+      </div>
+      <div class="search-hint">e.g. washing machine, that Bali restaurant, Tokyo flight</div>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <div class="page" id="p-detail">
+    <div class="back-row" onclick="show('p-search')">&larr; Search</div>
+    <div class="detail-head">
+      <div class="detail-id" id="d-id"></div>
+      <div class="detail-obj" id="d-obj"></div>
+    </div>
+    <div class="detail-body" id="d-body"></div>
+    <div class="detail-footer">
+      <button class="btn-primary" onclick="goAdd(currentId)">&#43; Add to this record</button>
+      <div class="nav-row">
+        <span class="nav-link" onclick="show('p-search')">&larr; Search</span>
+        <span class="nav-link" onclick="show('p-home')">&#8962; Home</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="p-success">
+    <div class="success-body">
+      <div class="success-icon">&#10003;</div>
+      <div class="success-title">Saved</div>
+      <div class="success-card">
+        <div class="record-id" id="s-id"></div>
+        <div class="record-date" id="s-date"></div>
+        <div class="record-kw" id="s-kw"></div>
+      </div>
+      <button class="btn-primary" onclick="show('p-home')">Back to home</button>
+      <button class="btn-ghost" onclick="goAdd(null)">Add another</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+var currentKeywords = [], currentCorrected = [], currentObject = "";
+var currentId = null, parentId = null, debounce = null;
+
+var today = new Date();
+document.getElementById("today").textContent =
+  today.getFullYear() + "/" +
+  String(today.getMonth() + 1).padStart(2, "0") + "/" +
+  String(today.getDate()).padStart(2, "0");
+document.getElementById("clock").textContent =
+  String(today.getHours()).padStart(2, "0") + ":" +
+  String(today.getMinutes()).padStart(2, "0");
+
+function renderKeywords(keywords, corrected) {
+  corrected = corrected || [];
+  return keywords.map(function (k) {
+    var isOld = corrected.indexOf(k) !== -1;
+    return '<span class="' + (isOld ? "kw-struck" : "") + '">' + k + "</span>";
+  }).join(" &middot; ");
+}
+
+function show(id) {
+  var pages = document.querySelectorAll(".page");
+  for (var i = 0; i < pages.length; i++) pages[i].classList.remove("active");
+  document.getElementById(id).classList.add("active");
+  if (id === "p-home") refreshCount();
+}
+
+function goAdd(parent) {
+  parentId = parent;
+  document.getElementById("add-label").textContent =
+    parent ? "Adding to #" + parent : "Say it, or type it";
+  document.getElementById("input").value = "";
+  document.getElementById("kw-row").innerHTML =
+    '<span class="kw-empty">Appears as you type&hellip;</span>';
+  document.getElementById("save-btn").disabled = true;
+  currentKeywords = []; currentCorrected = []; currentObject = "";
+  show("p-add");
+  document.getElementById("input").focus();
+}
+
+function goSearch() {
+  document.getElementById("q").value = "";
+  loadAll();
+  show("p-search");
+}
+
+function onInput() {
+  var text = document.getElementById("input").value.trim();
+  var row = document.getElementById("kw-row");
+  var btn = document.getElementById("save-btn");
+  clearTimeout(debounce);
+  if (!text) {
+    row.innerHTML = '<span class="kw-empty">Appears as you type&hellip;</span>';
+    btn.disabled = true;
+    return;
+  }
+  row.innerHTML = '<span class="loading">AI is reading&hellip;</span>';
+  debounce = setTimeout(function () {
+    fetch("/api/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.keywords && data.keywords.length) {
+          currentKeywords = data.keywords;
+          currentCorrected = data.corrected || [];
+          currentObject = data.object || "";
+          row.innerHTML = data.keywords.map(function (k) {
+            var isOld = currentCorrected.indexOf(k) !== -1;
+            return '<span class="kw-tag' + (isOld ? " old" : "") + '">' + k + "</span>";
+          }).join("");
+          btn.disabled = false;
+        } else {
+          row.innerHTML = '<span class="kw-empty">No keywords found</span>';
+        }
+      })
+      .catch(function () {
+        row.innerHTML = '<span class="kw-empty">Something went wrong. Try again.</span>';
+      });
+  }, 900);
+}
+
+function save() {
+  var text = document.getElementById("input").value.trim();
+  var btn = document.getElementById("save-btn");
+  btn.disabled = true; btn.textContent = "Saving...";
+  fetch("/api/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: text, keywords: currentKeywords, corrected: currentCorrected,
+      object: currentObject, parent: parentId
+    })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      btn.textContent = "Save";
+      document.getElementById("s-id").textContent = "#" + data.id;
+      document.getElementById("s-date").textContent = data.date;
+      document.getElementById("s-kw").innerHTML =
+        renderKeywords(data.keywords, data.corrected);
+      show("p-success");
+    });
+}
+
+function loadAll() {
+  fetch("/api/records")
+    .then(function (r) { return r.json(); })
+    .then(function (data) { renderResults(data, "Recent records"); });
+}
+
+function doSearch() {
+  var q = document.getElementById("q").value.trim();
+  if (!q) { loadAll(); return; }
+  document.getElementById("results").innerHTML =
+    '<div class="empty">Searching&hellip;</div>';
+  fetch("/api/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: q })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      renderResults(data, data.length + (data.length === 1 ? " result" : " results"));
+    });
+}
+
+function renderResults(list, label) {
+  var box = document.getElementById("results");
+  if (!list.length) {
+    box.innerHTML = '<div class="empty">Nothing found</div>';
+    return;
+  }
+  box.innerHTML = '<div class="section-label">' + label + "</div>" +
+    list.slice().reverse().map(function (o) {
+      return '<div class="record-card" onclick="openDetail(\'' + o.id + '\')">' +
+        '<div class="record-id">#' + o.id + "</div>" +
+        o.records.map(function (r) {
+          return '<div class="record-entry">' +
+            '<div class="record-date">' + r.date + "</div>" +
+            '<div class="record-kw">' + renderKeywords(r.keywords, r.corrected) + "</div>" +
+            "</div>";
+        }).join("") +
+        "</div>";
+    }).join("");
+}
+
+function openDetail(id) {
+  fetch("/api/records")
+    .then(function (r) { return r.json(); })
+    .then(function (allData) {
+      var o = null;
+      for (var i = 0; i < allData.length; i++) {
+        if (allData[i].id === id) { o = allData[i]; break; }
+      }
+      if (!o) return;
+      currentId = id;
+      document.getElementById("d-id").textContent = "#" + o.id;
+      document.getElementById("d-obj").textContent = o.object || "";
+      document.getElementById("d-body").innerHTML = o.records.map(function (r, i) {
+        return '<div class="detail-entry">' +
+          '<div class="entry-top">' +
+            '<div class="record-date">' + r.date + "</div>" +
+            '<span class="del-btn" onclick="event.stopPropagation();delEntry(\'' +
+              id + "'," + i + ')">Delete</span>' +
+          "</div>" +
+          '<div class="detail-kw">' + renderKeywords(r.keywords, r.corrected) + "</div>" +
+          '<div class="detail-orig">' + r.original + "</div>" +
+          "</div>";
+      }).join("");
+      show("p-detail");
+    });
+}
+
+function delEntry(id, index) {
+  if (!confirm("Delete this entry? This cannot be undone.")) return;
+  fetch("/api/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: id, index: index })
+  })
+    .then(function () { return fetch("/api/records"); })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var still = false;
+      for (var i = 0; i < data.length; i++) if (data[i].id === id) still = true;
+      if (still) openDetail(id);
+      else { loadAll(); show("p-search"); }
+    });
+}
+
+function refreshCount() {
+  fetch("/api/records")
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      document.getElementById("count").textContent = data.length;
+    });
+}
+
+refreshCount();
+</script>
+</body>
+</html>
