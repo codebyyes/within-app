@@ -77,7 +77,14 @@ Photos are easy to capture. People end up with thousands of images and still can
 
 ## Architecture
 
-Built with **AWS Strands Agents SDK**, powered by **Amazon Bedrock**.
+Built with **AWS Strands Agents SDK**, using Anthropic's Claude as the model provider.
+
+Within ships in two versions that share the same data format:
+
+- **`within_ai.py`** — the AI version. Strands Agents handles natural language understanding, keyword extraction, and semantic search.
+- **`within.py`** — an offline version with no AI calls. Same data structure, same search, no network required.
+
+We built both deliberately. The core value of Within does not depend on AI. AI makes it smarter, not possible.
 
 The agent has two responsibilities:
 
@@ -100,7 +107,7 @@ The agent has two responsibilities:
 ## Tech Stack
 
 - AWS Strands Agents SDK
-- Amazon Bedrock (Claude)
+- Claude Haiku 4.5 (Anthropic API)
 - Python 3.14
 
 ---
