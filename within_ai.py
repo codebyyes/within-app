@@ -1,14 +1,18 @@
 import json, os, sys
 from datetime import datetime
-from anthropic import Anthropic
+from strands import Agent
+from strands.models.anthropic import AnthropicModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DATA_FILE = "data.json"
-MODEL = "claude-haiku-4-5-20251001"
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+model = AnthropicModel(
+    client_args={"api_key": os.getenv("ANTHROPIC_API_KEY")},
+    model_id="claude-haiku-4-5-20251001",
+    max_tokens=300,
+)
 
 EXTRACT_PROMPT = """你從使用者描述自己生活的句子中，抽出可以未來搜尋回來的關鍵字。
 
@@ -22,6 +26,18 @@ EXTRACT_PROMPT = """你從使用者描述自己生活的句子中，抽出可以
 
 只輸出 JSON，不要有任何說明文字、不要有 markdown 標記：
 {"object": "這筆記錄主要關於什麼，2-6個字", "keywords": ["3到8個關鍵字"]}"""
+
+SEARCH_PROMPT = """你是個人記錄的搜尋引擎。使用者會給你一個搜尋句，和他所有的記錄。
+找出相關的記錄編號，只輸出編號的 JSON 陣列，例如：["001","003"]
+如果都不相關就輸出 []
+不要有任何說明文字。"""
+
+extractor = Agent(model=model, system_prompt=EXTRACT_PROMPT, callback_handler=None)
+searcher = Agent(model=model, system_prompt=SEARCH_PROMPT, callback_handler=None)
+
+
+def clean_json(raw):
+    return raw.strip().replace("```json", "").replace("```", "").strip()
 
 
 def load_data():
@@ -43,14 +59,7 @@ def next_id(data):
 
 
 def extract_keywords(text):
-    msg = client.messages.create(
-        model=MODEL,
-        max_tokens=300,
-        system=EXTRACT_PROMPT,
-        messages=[{"role": "user", "content": text}],
-    )
-    raw = msg.content[0].text.strip()
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = clean_json(str(extractor(text)))
     try:
         parsed = json.loads(raw)
         return parsed.get("object", ""), parsed.get("keywords", [])
@@ -110,17 +119,7 @@ def search(query):
         for o in data
     )
 
-    msg = client.messages.create(
-        model=MODEL,
-        max_tokens=200,
-        system="""你是個人記錄的搜尋引擎。使用者會給你一個搜尋句，和他所有的記錄。
-找出相關的記錄編號，只輸出編號的 JSON 陣列，例如：["001","003"]
-如果都不相關就輸出 []
-不要有任何說明文字。""",
-        messages=[{"role": "user", "content": f"搜尋：{query}\n\n記錄：\n{summary}"}],
-    )
-
-    raw = msg.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = clean_json(str(searcher(f"搜尋：{query}\n\n記錄：\n{summary}")))
     try:
         ids = json.loads(raw)
     except Exception:
