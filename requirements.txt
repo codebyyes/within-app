@@ -1,0 +1,4 @@
+flask
+strands-agents[anthropic]
+python-dotenv
+gunicorn
